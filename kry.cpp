@@ -54,6 +54,51 @@ void freeConfig(programConfig *prConf){
 }
 
 /**
+ * Store hex string into the char *  
+ * 
+ * 23 15 87 96 
+ * a4 5a 93 92 
+ * 95 1d 9a 72 
+ * df fd 6a 53 
+ * 9b 14 a0 78 
+ * 32 39 0b 93 
+ * 7b 94 a8 0d 
+ * db 6d c1 8e
+
+ * 0010 0011 0001 0101 1000 0111 1001 0110 
+ * 1010 0100 0101 1010 1001 0011 1001 0010 
+ * 1001 0101 0001 1101 1001 1010 0111 0010 
+ * 1101 1111 1111 1101 0110 1010 0101 0011 
+ * 1001 1011 0001 0100 1010 0000 0111 1000
+ * 0011 0010 0011 1001 0000 1011 1001 0011
+ * 0111 1011 1001 0100 1010 1000 0000 1101 
+ * 1101 1011 0110 1101 1100 0001 1000 1110
+ * 
+ *  35  21 135 150 164  90 147 146 149  29 154
+ * 114 223 253 106  83 155  20 160 120  50  57 
+ *  11 147 123 148 168  13 219 109 193 142
+ * 
+ */
+void hexToChar(char *hex, char *out){
+
+	char hexDigits[3];
+	int j = 0;
+	for (size_t i = 0; i < strlen(hex); i+=2){
+		
+		hexDigits[0] = hex[i];
+		hexDigits[1] = hex[i+1];
+		hexDigits[2] = '\0';
+
+        out[j++] = static_cast<uint8_t>(std::stoi(hexDigits, nullptr, 16));
+	}
+
+//	for (int i = 0; i < MAC_SIZE_CHAR; i++){
+//		printf("%u ", static_cast<unsigned char>(out[i]));
+//	}
+	return;
+}
+
+/**
  * Parse input args
 */
 void argParse(int argc, char **argv, programConfig *prConf){
@@ -129,6 +174,11 @@ void argParse(int argc, char **argv, programConfig *prConf){
 			if (i == argc){
 				goto errorArgs;
 			}
+			if (strlen(argv[i]) != MAC_SIZE_HEX){
+				goto errorMacSize;
+			}
+			hexToChar(argv[i], prConf->mac);
+
 		}
 		// -n NUM 
 		else if (strcmp(argv[i],"-n") == 0){
@@ -170,8 +220,6 @@ void argParse(int argc, char **argv, programConfig *prConf){
 		}
 	}
 	
-	cout << prConf->key << endl;
-	
 	return;
 
 errorArgs:
@@ -189,7 +237,11 @@ errorNum:
 errorFormat:
 	cerr << "Error: wrong arg format check -m or -k" << endl;
 	freeConfig(prConf);
-	exit(4);
+	exit(5);
+errorMacSize:
+	cerr << "Error: wrong arg format MAC should be 64 hexa symbols" << endl;
+	freeConfig(prConf);
+	exit(5);
 }
 
 int main(int argc, char **argv){
@@ -197,9 +249,18 @@ int main(int argc, char **argv){
 
 	// arg parsing 
 	argParse(argc, argv, &prConf);
-  
-	cerr << " ll" << endl;
-	
+
+	cout << "Key: " << endl;
+	cout << prConf.key << endl;
+	cout << "MSG ext: " << endl;
+	cout << prConf.msgExt << endl;
+	cout << "program config: " << endl;
+	cout << prConf.program << endl;
+	cout << "MAC: " << endl;
+	for (size_t i = 0; i < MAC_SIZE_CHAR; ++i) {
+        printf("%02X ", static_cast<unsigned char>(prConf.mac[i]));
+    }
+
 	freeConfig(&prConf);
 	return 0;
 }

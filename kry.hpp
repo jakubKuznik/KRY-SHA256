@@ -12,12 +12,14 @@
 #include <regex>
 
 #define MAC_SIZE 256 
+#define MAC_SIZE_HEX 64 
+#define MAC_SIZE_CHAR 32 
 
 #define C_SHA_COUNT 0
 #define S_MAC_COUNT 1 
 #define V_VALIDATE_MAC 2 
 #define E_LEN_EXT_ATTACK 3 
-#define NOTHING 255 
+#define NOTHING 256 
 
 /**
  * Structure that represents program configuration.
@@ -36,7 +38,7 @@
 typedef struct {
 	char program[1];
 	char *key;
-	char mac[MAC_SIZE];
+	char mac[MAC_SIZE_CHAR];
 	uint64_t num;
 	char *msgExt;
 } programConfig;
