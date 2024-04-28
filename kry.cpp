@@ -219,6 +219,20 @@ void argParse(int argc, char **argv, programConfig *prConf){
 			goto errorArgs;
 		}
 	}
+
+	if (prConf->program[0] == NOTHING){
+		goto errorArgs;	
+	}
+	else if (prConf->program[0] == V_VALIDATE_MAC){
+		if (macSet == false || keySet == false){
+			goto errorArgs;	
+		}
+	}
+	else if (prConf->program[0] == E_LEN_EXT_ATTACK){
+		if (macSet == false || numSet == false || msgSet == false){
+			goto errorArgs;	
+		}
+	}
 	
 	return;
 

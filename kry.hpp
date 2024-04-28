@@ -19,7 +19,7 @@
 #define S_MAC_COUNT 1 
 #define V_VALIDATE_MAC 2 
 #define E_LEN_EXT_ATTACK 3 
-#define NOTHING 256 
+#define NOTHING 255 
 
 /**
  * Structure that represents program configuration.
