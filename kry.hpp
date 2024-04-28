@@ -9,6 +9,7 @@
 #include <list>
 #include <string.h>
 #include <algorithm>
+#include <regex>
 
 #define MAC_SIZE 256 
 
@@ -16,6 +17,7 @@
 #define S_MAC_COUNT 1 
 #define V_VALIDATE_MAC 2 
 #define E_LEN_EXT_ATTACK 3 
+#define NOTHING 255 
 
 /**
  * Structure that represents program configuration.
@@ -32,10 +34,17 @@
  *         MSG format: ^[a-zA-Z0-9!#$%&'"()*+,\-.\/:;<>=?@[\]\\^_{}|~]*$
 */
 typedef struct {
-	char progam[1];
+	char program[1];
 	char *key;
 	char mac[MAC_SIZE];
 	uint64_t num;
 	char *msgExt;
 } programConfig;
 
+// Regex for key - validate format 
+// ^[A-Fa-f0-9]*$.
+std::regex keyRegex("^[A-Fa-f0-9]*$");
+
+// Regex for msgExt - validate format
+// ^[a-zA-Z0-9!#$%&’"()*+,\-.\/:;<>=?@[\]\\^_{}|~]*$
+std::regex msgExtRegex("^[a-zA-Z0-9!#$%&’\"()*+,\\-.\\/:;<>=?@[\\]\\\\^_{}|~]*$");
