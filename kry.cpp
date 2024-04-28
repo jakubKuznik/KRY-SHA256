@@ -44,29 +44,45 @@ void printHelp(){
 /**
  * Parse input args
 */
-void argParse(int argc, char **argv){
-	
-	cout << argc;
+void argParse(int argc, char **argv, programConfig *prConf){
+
+	// We cannot combine -c -s -v -e 
+	bool one = false;
+
 	// if there are no args 
 	if (argc == 1){
 		printHelp();
 	}
 
+
+
 	for (int i = 1; i < argc; i++){
-		if (strcmp(argv[i],"-ma") == 0){
+		if (strcmp(argv[i],"-c") == 0){
 		
 		}
-		else if (strcmp(argv[i],"-mb") == 0){
+		else if (strcmp(argv[i],"-s") == 0){
 		
 		}
-		else if (strcmp(argv[i],"-ra") == 0){
+		else if (strcmp(argv[i],"-v") == 0){
 		
 		}
-		else if (strcmp(argv[i],"-rb") == 0){
+		else if (strcmp(argv[i],"-e") == 0){
+		
+		}
+		else if (strcmp(argv[i],"-k") == 0){
+		
+		}
+		else if (strcmp(argv[i],"-m") == 0){
+		
+		}
+		else if (strcmp(argv[i],"-n") == 0){
+		
+		}
+		else if (strcmp(argv[i],"-a") == 0){
 		
 		}
 		else{
-		goto errorArgs;
+			goto errorArgs;
 		}
 	}
 
@@ -77,11 +93,11 @@ errorArgs:
 	exit(2);
 }
 
-
 int main(int argc, char **argv){
+	programConfig prConf;
 
 	// arg parsing 
-	argParse(argc, argv);
+	argParse(argc, argv, &prConf);
   
 	cerr << " ll" << endl;
 
