@@ -73,9 +73,11 @@ const uint32_t K[] = {
 typedef struct {
 	char program[1];
 	char *key;
+	uint64_t keySize;
 	char mac[MAC_SIZE_CHAR];
 	uint64_t num;
 	char *msgExt;
+	uint64_t msgSize;
 } programConfig;
 
 // Regex for key - validate format 

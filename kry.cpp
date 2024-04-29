@@ -209,13 +209,23 @@ void argParse(int argc, char **argv, programConfig *prConf){
 	if (prConf->program[0] == NOTHING){
 		goto errorArgs;	
 	}
+	else if (prConf->program[0] == C_SHA_COUNT){
+		if (macSet == true || keySet == true || numSet == true || msgSet == true){
+			goto errorArgs;	
+		}
+	}
+	else if (prConf->program[0] == S_MAC_COUNT){
+		if (macSet == true || keySet == false || numSet == true || msgSet == true){
+			goto errorArgs;	
+		}
+	}
 	else if (prConf->program[0] == V_VALIDATE_MAC){
-		if (macSet == false || keySet == false){
+		if (macSet == false || keySet == false || numSet == true || msgSet == true){
 			goto errorArgs;	
 		}
 	}
 	else if (prConf->program[0] == E_LEN_EXT_ATTACK){
-		if (macSet == false || numSet == false || msgSet == false){
+		if (macSet == false || keySet == true || numSet == false || msgSet == false){
 			goto errorArgs;	
 		}
 	}
@@ -247,10 +257,12 @@ errorMacSize:
 /**
  * Read from STDIN to *out.
  * 
+ * key will be appendend in front of message 
+ * 
  * If malloc error return -1
  * else return input string size  
 */
-int readInput(char **out, uint64_t *length){
+int readInput(char **out, uint64_t *length, char *key){
 
 	int c;
 	uint64_t allocatedSize = INIT_SIZE;
@@ -259,6 +271,24 @@ int readInput(char **out, uint64_t *length){
 	*out = (char *)malloc(INIT_SIZE * sizeof(char));
 	if (*out == NULL){
 		return -1;
+	}
+
+	// if there is a key append it before message 
+	if (key != nullptr){
+		while ((*length) < strlen(key)){
+			cout << " h " ;
+			if ((*length) + 1 > allocatedSize){
+				allocatedSize += INIT_SIZE;
+				char *temp = (char *)realloc(out, allocatedSize * sizeof(char));
+				if (temp == NULL){
+					free(out);
+					return -1;
+				}
+				*out = temp;
+			}
+			(*out)[(*length)] = key[(*length)];
+			(*length)++;
+		}
 	}
 
 	while ((c = getchar()) != EOF){
@@ -373,9 +403,7 @@ void initMessSchedule(uint32_t *messSchedule, uint32_t *messBlocks, uint64_t blo
  * 
  * return -1 if malloc error.
 */
-int countSHA(char *inputMess, uint64_t inputLen){
-
-	uint32_t SHA[8];
+int countSHA(char *inputMess, uint64_t inputLen, uint32_t SHA[8]){
 
 	uint32_t * messBlocks;
 	uint64_t blocksCount;
@@ -406,7 +434,6 @@ int countSHA(char *inputMess, uint64_t inputLen){
 	
 	uint32_t help1, help2, help3;
 
-	cout << endl;
 	// for each chunk do the callculation 
 	for (uint64_t i = 0; i < blocksCount; i++){
 
@@ -455,9 +482,7 @@ int countSHA(char *inputMess, uint64_t inputLen){
 		h6 = h6 + g;
 		h7 = h7 + h;
 	}
-
-	cout << endl;
-	cout << "SHA: ";
+	
 	SHA[0] = h0;
 	SHA[1] = h1;
 	SHA[2] = h2;
@@ -466,10 +491,6 @@ int countSHA(char *inputMess, uint64_t inputLen){
 	SHA[5] = h5;
 	SHA[6] = h6;
 	SHA[7] = h7;
-	for (int x = 0; x < 8; x++) {
-        printf("%08X", SHA[x]);
-	}
-
 
 	free(messBlocks);
 	return 0;
@@ -482,12 +503,13 @@ int main(int argc, char **argv){
 	programConfig prConf;
 	char *inputMessage = NULL;
 	uint64_t inputLen;
+	uint32_t SHA[8];
 
 	// arg parsing 
 	argParse(argc, argv, &prConf);
 
 	//read from stdin
-	if(readInput(&inputMessage, &inputLen) == -1){
+	if(readInput(&inputMessage, &inputLen, prConf.key) == -1){
 		goto errorMalloc;
 	}
 
@@ -513,13 +535,11 @@ int main(int argc, char **argv){
         printf("%02X ", static_cast<unsigned char>(inputMessage[i]));
 	}
 
-	if(prConf.program[0] == C_SHA_COUNT){
-		if (countSHA(inputMessage, inputLen) == -1){
+	// -c || -s -k KEY 
+	if(prConf.program[0] == C_SHA_COUNT || prConf.program[0] == S_MAC_COUNT){
+		if (countSHA(inputMessage, inputLen, SHA) == -1){
 			goto errorMalloc;
 		}
-	}
-	else if(prConf.program[0] == S_MAC_COUNT){
-
 	}
 	else if(prConf.program[0] == V_VALIDATE_MAC){
 
@@ -527,6 +547,14 @@ int main(int argc, char **argv){
 	else if(prConf.program[0] == E_LEN_EXT_ATTACK){
 
 	}
+
+
+	cout << endl;
+	// print SHA256 to STDOUT 
+	for (int x = 0; x < 8; x++) {
+        printf("%08x", SHA[x]);
+	}
+	cout << endl;
 
 
 	free(inputMessage);
