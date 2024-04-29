@@ -19,10 +19,16 @@
 #define S_MAC_COUNT 1 
 #define V_VALIDATE_MAC 2 
 #define E_LEN_EXT_ATTACK 3 
-#define NOTHING 255 
-
+#define NOTHING 4 
 
 #define INIT_SIZE 1024 
+
+// SHA CONST 
+#define RESERVED_FOR_MESSAGE_LEN_BITS 64
+#define RESERVED_ONE_BYTE 8 
+#define MESS_BLOCK_SIZE 512
+
+#define RESERVED_BIT 0x80
 
 /**
  * Structure that represents program configuration.

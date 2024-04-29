@@ -9,6 +9,7 @@
 
 using namespace std;
 
+
 /**
  * Prints help and exit program with return code 1
 */
@@ -41,6 +42,7 @@ void printHelp(){
 	exit(1);
 }
 
+/***************** PARSE INPUT CODE **************************/
 /** 
  * Free the memory allocated for program config.
 */
@@ -56,27 +58,14 @@ void freeConfig(programConfig *prConf){
 /**
  * Store hex string into the char *  
  * 
- * 23 15 87 96 
- * a4 5a 93 92 
- * 95 1d 9a 72 
- * df fd 6a 53 
- * 9b 14 a0 78 
- * 32 39 0b 93 
- * 7b 94 a8 0d 
- * db 6d c1 8e
-
- * 0010 0011 0001 0101 1000 0111 1001 0110 
- * 1010 0100 0101 1010 1001 0011 1001 0010 
- * 1001 0101 0001 1101 1001 1010 0111 0010 
- * 1101 1111 1111 1101 0110 1010 0101 0011 
- * 1001 1011 0001 0100 1010 0000 0111 1000
- * 0011 0010 0011 1001 0000 1011 1001 0011
- * 0111 1011 1001 0100 1010 1000 0000 1101 
- * 1101 1011 0110 1101 1100 0001 1000 1110
- * 
- *  35  21 135 150 164  90 147 146 149  29 154
- * 114 223 253 106  83 155  20 160 120  50  57 
- *  11 147 123 148 168  13 219 109 193 142
+ * 23 15 87 96 a4 5a 93 92 
+ * 95 1d 9a 72 df fd 6a 53 
+ * 9b 14 a0 78 32 39 0b 93 
+ * 7b 94 a8 0d db 6d c1 8e
+ *
+ * 035 021 135 150 164 090 147 146 149 029 154
+ * 114 223 253 106 083 155 020 160 120 050 057 
+ * 011 147 123 148 168 013 219 109 193 142
  * 
  */
 void hexToChar(char *hex, char *out){
@@ -92,9 +81,6 @@ void hexToChar(char *hex, char *out){
         out[j++] = static_cast<uint8_t>(std::stoi(hexDigits, nullptr, 16));
 	}
 
-//	for (int i = 0; i < MAC_SIZE_CHAR; i++){
-//		printf("%u ", static_cast<unsigned char>(out[i]));
-//	}
 	return;
 }
 
@@ -264,11 +250,11 @@ errorMacSize:
  * If malloc error return -1
  * else return input string size  
 */
-int readInput(char **out){
+int readInput(char **out, uint64_t *length){
 
 	int c;
-	size_t allocatedSize = INIT_SIZE;
-	size_t length = 0;
+	uint64_t allocatedSize = INIT_SIZE;
+	*length = 0;
 
 	*out = (char *)malloc(INIT_SIZE * sizeof(char));
 	if (out == NULL){
@@ -276,7 +262,7 @@ int readInput(char **out){
 	}
 
 	while ((c = getchar()) != EOF){
-		if (length + 1 > allocatedSize){
+		if ((*length) + 1 > allocatedSize){
 			allocatedSize += INIT_SIZE;
 			char *temp = (char *)realloc(out, allocatedSize * sizeof(char));
 			if (temp == NULL){
@@ -285,27 +271,123 @@ int readInput(char **out){
 			}
 			*out = temp;
 		}
-		(*out)[length++] = c;
+		(*out)[(*length)++] = c;
 	}
 
-	return length;
+	return 0;
 }
+/******************************************************/
+
+/***************** SHA CODE **************************/
+
+/**
+ * Create message block from input message 
+ * 
+ * output block is always n*512 bits (16*uint_32) 
+*/
+uint32_t *createMessageBlock(char *inputMessage, uint64_t inputLen){
+	
+	uint32_t * blocks;
+	int blocksCount = 0;
+
+	// 512 bit 
+	// 64 bit left for message len 
+	// 512 - 64 = 448 bit 
+	// count number of blocks 
+	cout << endl << inputLen * 8 + RESERVED_ONE_BYTE + RESERVED_FOR_MESSAGE_LEN_BITS << endl;
+	blocksCount = ((inputLen * 8 + RESERVED_FOR_MESSAGE_LEN_BITS) / MESS_BLOCK_SIZE) + 1;
+	
+	blocks = (uint32_t *)malloc(blocksCount * 16 * sizeof(uint32_t));
+	if (blocks == NULL){
+		return NULL;
+	}
+
+	// initialize block with zeros 0 
+	for (int i = 0; i < blocksCount * 16; i++){
+		blocks[i] = 0;
+	}
+
+	// Copy the message into the array, byte by byte
+	uint64_t i;
+	uint64_t index; 
+	uint64_t offset;
+	cout << endl; 
+    for (i = 0; i < inputLen; i++) {
+        index = i / sizeof(uint32_t);
+        offset = sizeof(char)* 8 * (3 - (i % sizeof(uint32_t)));
+		cout << "Index: " << index << endl; 
+		cout << "Offset: " << offset << endl; 
+		blocks[index] |= (uint32_t)(inputMessage[i]) << offset;
+    }
+	// append 1 
+    index = i / sizeof(uint32_t);
+    offset = sizeof(char)* 8 * (3 - (i % sizeof(uint32_t)));
+	cout << "Index: " << index << endl; 
+	cout << "Offset: " << offset << endl; 
+	blocks[index] |= (uint32_t)(RESERVED_BIT) << offset;
+	
+	// store message len to the message block 
+	//  in last 64 bits  
+	blocks[(blocksCount * 16)-1] = (uint32_t)(inputLen*8);
+	blocks[(blocksCount * 16)-2] = (uint32_t)((inputLen*8) >> 32);
+
+	cout << "Input Message: " << endl;
+	for (uint64_t i = 0; i < inputLen; ++i) {
+        printf("%02X ", static_cast<unsigned char>(inputMessage[i]));
+	}
+	cout << endl << "Message block: " << endl;
+	for (int i = 0; i < (16 * blocksCount); ++i) {
+        printf("%08X ", blocks[i]);
+	}
+
+
+	// store the size 
+
+	// encode the input to binary using UTF-8
+	// and append a single '1' to it. 
+	cout << endl << "kulo" << endl;
+
+
+	
+	return blocks;
+}
+
+/**
+ * Count SHA 
+ * 
+ * return -1 if malloc error.
+*/
+int countSHA(char *inputMessage, uint64_t inputLen){
+
+	uint32_t * messageBlock;
+	
+	// split the message to the chunks 
+	messageBlock = createMessageBlock(inputMessage, inputLen);
+	if (messageBlock == NULL){
+		return -1;
+	}
+
+	free(messageBlock);
+	return 0;
+}
+/******************************************************/
+
 
 int main(int argc, char **argv){
 	
 	programConfig prConf;
 	char *inputMessage = NULL;
-	int inputLength;
+	uint64_t inputLen;
 
 	// arg parsing 
 	argParse(argc, argv, &prConf);
 
 	//todo read from stdin
-	inputLength = readInput(&inputMessage);
-	if(inputLength == -1){
+	if(readInput(&inputMessage, &inputLen) == -1){
 		goto errorMalloc;
 	}
 
+	// TODO remove debug  
 	// -s -k KEY 
 	// KEYmessage 
 	cout << "Key: " << endl;
@@ -317,14 +399,29 @@ int main(int argc, char **argv){
 	cout << "program config: " << endl;
 	cout << prConf.program[0] << endl;
 	cout << "MAC: " << endl;
-	for (size_t i = 0; i < MAC_SIZE_CHAR; ++i) {
+	for (int i = 0; i < MAC_SIZE_CHAR; ++i) {
         printf("%02X ", static_cast<unsigned char>(prConf.mac[i]));
     }
-	cout << "Input Length: " << endl;
-	cout << inputLength << endl;
+	cout << endl << "Input Length: " << endl;
+	cout << inputLen << endl;
 	cout << "Input Message: " << endl;
-	for (size_t i = 0; i < inputLength; ++i) {
-		printf("%d ", inputMessage[i]);
+	for (uint64_t i = 0; i < inputLen; ++i) {
+        printf("%02X ", static_cast<unsigned char>(inputMessage[i]));
+	}
+
+	if(prConf.program[0] == C_SHA_COUNT){
+		if (countSHA(inputMessage, inputLen) == -1){
+			goto errorMalloc;
+		}
+	}
+	else if(prConf.program[0] == S_MAC_COUNT){
+
+	}
+	else if(prConf.program[0] == V_VALIDATE_MAC){
+
+	}
+	else if(prConf.program[0] == E_LEN_EXT_ATTACK){
+
 	}
 
 
