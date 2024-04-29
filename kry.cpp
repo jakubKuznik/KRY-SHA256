@@ -386,15 +386,6 @@ int countSHA(char *inputMess, uint64_t inputLen){
 	if (messBlocks == NULL){
 		return -1;
 	}
-	
-	cout << "Input Message: " << endl;
-	for (uint64_t i = 0; i < inputLen; i++) {
-        printf("%02X ", static_cast<unsigned char>(inputMess[i]));
-	}
-	cout << endl << "Message block: " << endl;
-	for (uint64_t i = 0; i < (16 * blocksCount); i++) {
-        printf("%08X ", messBlocks[i]);
-	}
 
 	uint32_t h0 = H0;
 	uint32_t h1 = H1;
@@ -406,8 +397,6 @@ int countSHA(char *inputMess, uint64_t inputLen){
 	uint32_t h7 = H7;
 
 	uint32_t a,b,c,d,e,f,g,h;
-	a = h0; b = h1; c = h2; d = h3;
-	e = h4; f = h5; g = h6; h = h7;
 
 	uint32_t temp1, temp2;
 	
@@ -423,10 +412,9 @@ int countSHA(char *inputMess, uint64_t inputLen){
 
 		// Inititialize message schedule   
 		initMessSchedule(messSchedule, messBlocks, i);
-		cout << endl << "Message schedule: " << endl;
-		for (int x = 0; x < MESS_SCHEDULE_SIZE; x++) {
-        	printf("%08X ", messSchedule[x]);
-		}
+	
+		a = h0; b = h1; c = h2; d = h3;
+		e = h4; f = h5; g = h6; h = h7;
 		
 		// work with message schedule 
 		for (int j = 0; j < MESS_SCHEDULE_SIZE; j++){
@@ -438,7 +426,7 @@ int countSHA(char *inputMess, uint64_t inputLen){
 
 			choice = (e & f) ^ (~e & g);
 
-			temp1 = h + sum1 + choice + K[j] + messSchedule[(MESS_BLOCK_SIZE_UINT * i) + j];
+			temp1 = h + sum1 + choice + K[j] + messSchedule[j];
 
 			help1 = (a >> 2) | (a << (32-2));
 			help2 = (a >> 13) | (a << (32-13));
@@ -468,7 +456,6 @@ int countSHA(char *inputMess, uint64_t inputLen){
 		h7 = h7 + h;
 	}
 
-	cout << endl;
 	cout << endl;
 	cout << "SHA: ";
 	SHA[0] = h0;
