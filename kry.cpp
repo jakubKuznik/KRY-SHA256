@@ -258,23 +258,84 @@ errorMacSize:
 	exit(5);
 }
 
+/**
+ * Read from STDIN to *out.
+ * 
+ * If malloc error return -1
+ * else return input string size  
+*/
+int readInput(char **out){
+
+	int c;
+	size_t allocatedSize = INIT_SIZE;
+	size_t length = 0;
+
+	*out = (char *)malloc(INIT_SIZE * sizeof(char));
+	if (out == NULL){
+		return -1;
+	}
+
+	while ((c = getchar()) != EOF){
+		if (length + 1 > allocatedSize){
+			allocatedSize += INIT_SIZE;
+			char *temp = (char *)realloc(out, allocatedSize * sizeof(char));
+			if (temp == NULL){
+				free(out);
+				return -1;
+			}
+			*out = temp;
+		}
+		(*out)[length++] = c;
+	}
+
+	return length;
+}
+
 int main(int argc, char **argv){
+	
 	programConfig prConf;
+	char *inputMessage = NULL;
+	int inputLength;
 
 	// arg parsing 
 	argParse(argc, argv, &prConf);
 
+	//todo read from stdin
+	inputLength = readInput(&inputMessage);
+	if(inputLength == -1){
+		goto errorMalloc;
+	}
+
+	// -s -k KEY 
+	// KEYmessage 
 	cout << "Key: " << endl;
-	cout << prConf.key << endl;
+	if (prConf.key != nullptr)
+		cout << prConf.key << endl;
 	cout << "MSG ext: " << endl;
-	cout << prConf.msgExt << endl;
+	if (prConf.msgExt != nullptr)
+		cout << prConf.msgExt << endl;
 	cout << "program config: " << endl;
-	cout << prConf.program << endl;
+	cout << prConf.program[0] << endl;
 	cout << "MAC: " << endl;
 	for (size_t i = 0; i < MAC_SIZE_CHAR; ++i) {
         printf("%02X ", static_cast<unsigned char>(prConf.mac[i]));
     }
+	cout << "Input Length: " << endl;
+	cout << inputLength << endl;
+	cout << "Input Message: " << endl;
+	for (size_t i = 0; i < inputLength; ++i) {
+		printf("%d ", inputMessage[i]);
+	}
 
+
+	free(inputMessage);
 	freeConfig(&prConf);
 	return 0;
+
+
+
+errorMalloc:
+	cerr << "Error: Memory allocation error"<< endl;
+	freeConfig(&prConf);
+	exit(3);
 }

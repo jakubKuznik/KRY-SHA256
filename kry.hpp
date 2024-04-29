@@ -21,6 +21,9 @@
 #define E_LEN_EXT_ATTACK 3 
 #define NOTHING 255 
 
+
+#define INIT_SIZE 1024 
+
 /**
  * Structure that represents program configuration.
  * 
@@ -45,7 +48,7 @@ typedef struct {
 
 // Regex for key - validate format 
 // ^[A-Fa-f0-9]*$.
-std::regex keyRegex("^[A-Fa-f0-9]*$");
+std::regex keyRegex("^[A-Za-z0-9]*$");
 
 // Regex for msgExt - validate format
 // ^[a-zA-Z0-9!#$%&’"()*+,\-.\/:;<>=?@[\]\\^_{}|~]*$
