@@ -331,7 +331,7 @@ uint32_t *createMessBlock(char *inputMess, uint64_t inputLen, uint64_t *blocksCo
  * 
  * block is always 2048bits = (64*uint_32)  
 */
-int initMessSchedule(uint32_t *messSchedule, uint32_t *messBlocks){
+void initMessSchedule(uint32_t *messSchedule, uint32_t *messBlocks, uint64_t blockNum){
 	
 	uint32_t sigma0;
 	uint32_t sigma1;
@@ -345,21 +345,14 @@ int initMessSchedule(uint32_t *messSchedule, uint32_t *messBlocks){
 		messSchedule[i] = 0;
 	}
 
-	// copy 1st chunk into 1st 166 words w[0..15] of the message schedule 
+	// copy n-th chunk into 1st 16 words w[0..15] of the message schedule 
 	for (int i = 0; i < 16; i++){
-		messSchedule[i] = messBlocks[i];
+		messSchedule[i] = messBlocks[(blockNum * MESS_BLOCK_SIZE_UINT) + i];
 	}
 
-	// sigma 0 =     w1 right rotate 7 
-	//       	 XOR w1 right rotate 18 
-	//           XOR w1 right shift 3  
-	// sigma 1 =     w14 right rotate 17 
-	//       	 XOR w19 right rotate 19
-	//           XOR w10 right shift 10 
-	// w16     =     w0 
-	//       	  OR sigma0 
-	//       	  OR w9
-	//       	  OR sigma1 
+	// sigma 0 = w1  right rotate  7 XOR  w1 right rotate 18 XOR  w1 right shift 3  
+	// sigma 1 = w14 right rotate 17 XOR w19 right rotate 19 XOR w10 right shift 10 
+	// w16     = w0 OR sigma0 OR w9 OR sigma1 
 	for (int i = 0; i < (MESS_SCHEDULE_SIZE - W16); i++){
 		temp1 = (messSchedule[i+W1] >> 7)  | (messSchedule[i+W1] << (32-7));
 		temp2 = (messSchedule[i+W1] >> 18) | (messSchedule[i+W1] << (32-18));
@@ -373,9 +366,6 @@ int initMessSchedule(uint32_t *messSchedule, uint32_t *messBlocks){
 		
 		messSchedule[i+W16] = messSchedule[i+W0] + sigma0 + messSchedule[i+W9] + sigma1;
 	}
-
-
-	return 0;
 }
 
 /**
@@ -387,7 +377,6 @@ int countSHA(char *inputMess, uint64_t inputLen){
 
 	uint32_t * messBlocks;
 	uint64_t blocksCount;
-	
 	uint32_t messSchedule[MESS_SCHEDULE_SIZE];
 	
 	// split the message to the chunks 
@@ -397,21 +386,79 @@ int countSHA(char *inputMess, uint64_t inputLen){
 	}
 	
 	cout << "Input Message: " << endl;
-	for (uint64_t i = 0; i < inputLen; ++i) {
+	for (uint64_t i = 0; i < inputLen; i++) {
         printf("%02X ", static_cast<unsigned char>(inputMess[i]));
 	}
 	cout << endl << "Message block: " << endl;
-	for (uint64_t i = 0; i < (16 * blocksCount); ++i) {
+	for (uint64_t i = 0; i < (16 * blocksCount); i++) {
         printf("%08X ", messBlocks[i]);
 	}
 
-	// Inititialize message schedule   
-	initMessSchedule(messSchedule, messBlocks);
-	cout << endl << "Message schedule: " << endl;
-	for (int i = 0; i < MESS_SCHEDULE_SIZE; ++i) {
-        printf("%08X ", messSchedule[i]);
-	}
+	uint32_t h0 = H0;
+	uint32_t h1 = H1;
+	uint32_t h2 = H2;
+	uint32_t h3 = H3;
+	uint32_t h4 = H4;
+	uint32_t h5 = H5;
+	uint32_t h6 = H6;
+	uint32_t h7 = H7;
 
+	uint32_t a,b,c,d,e,f,g,h;
+
+	uint32_t temp1, temp2;
+	
+	uint32_t sum0, sum1;
+	uint32_t choice;
+	uint32_t majority;
+	
+	uint32_t help1, help2, help3;
+
+	cout << endl;
+	// for each chunk do the callculation 
+	for (uint64_t i = 0; i < blocksCount; i++){
+
+		// Inititialize message schedule   
+		initMessSchedule(messSchedule, messBlocks, i);
+		cout << endl << "Message schedule: " << endl;
+		for (int x = 0; x < MESS_SCHEDULE_SIZE; x++) {
+        	printf("%08X ", messSchedule[x]);
+		}
+		
+		a = h0; b = h1; c = h2; d = h3;
+		e = h4; f = h5; g = h6; h = h7;
+		
+		// work with message schedule 
+		for (int j = 0; j < MESS_SCHEDULE_SIZE; j++){
+
+			help1 = (e >> 6) | (e << (32-6));
+			help2 = (e >> 11) | (e << (32-11));
+			help3 = (e >> 25) | (e << (32-25));
+			sum1  = help1 ^ help2 ^ help3;
+
+			choice = (e & f) ^ (~e & g);
+
+			temp1 = h + sum1 + choice + K[j] + messSchedule[(MESS_BLOCK_SIZE_UINT * i) + j];
+
+			help1 = (a >> 2) | (a << (32-2));
+			help2 = (a >> 13) | (e << (32-13));
+			help3 = (e >> 22) | (e << (32-22));
+			sum0 = help1 ^ help2 ^ help3;
+
+			majority = (a & b) ^ (a & c) ^ (b & c);
+
+			temp2 = majority + sum0;
+
+			e = d + temp1;
+			a = temp1 + temp2;
+		}
+		h0 = h0 + a; h1 = h1 + b; h2 = h2 + b; h3 = h3 + b;
+		h4 = h4 + b; h5 = h5 + b; h6 = h6 + b; h7 = h7 + b;
+		cout << endl;
+		cout << endl;
+		for (int x = 0; x < MESS_SCHEDULE_SIZE; x++) {
+        	printf("%08X ", messSchedule[x]);
+		}
+	}
 
 	free(messBlocks);
 	return 0;
