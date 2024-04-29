@@ -375,6 +375,8 @@ void initMessSchedule(uint32_t *messSchedule, uint32_t *messBlocks, uint64_t blo
 */
 int countSHA(char *inputMess, uint64_t inputLen){
 
+	uint32_t SHA[8];
+
 	uint32_t * messBlocks;
 	uint64_t blocksCount;
 	uint32_t messSchedule[MESS_SCHEDULE_SIZE];
@@ -404,6 +406,8 @@ int countSHA(char *inputMess, uint64_t inputLen){
 	uint32_t h7 = H7;
 
 	uint32_t a,b,c,d,e,f,g,h;
+	a = h0; b = h1; c = h2; d = h3;
+	e = h4; f = h5; g = h6; h = h7;
 
 	uint32_t temp1, temp2;
 	
@@ -424,9 +428,6 @@ int countSHA(char *inputMess, uint64_t inputLen){
         	printf("%08X ", messSchedule[x]);
 		}
 		
-		a = h0; b = h1; c = h2; d = h3;
-		e = h4; f = h5; g = h6; h = h7;
-		
 		// work with message schedule 
 		for (int j = 0; j < MESS_SCHEDULE_SIZE; j++){
 
@@ -440,25 +441,48 @@ int countSHA(char *inputMess, uint64_t inputLen){
 			temp1 = h + sum1 + choice + K[j] + messSchedule[(MESS_BLOCK_SIZE_UINT * i) + j];
 
 			help1 = (a >> 2) | (a << (32-2));
-			help2 = (a >> 13) | (e << (32-13));
-			help3 = (e >> 22) | (e << (32-22));
+			help2 = (a >> 13) | (a << (32-13));
+			help3 = (a >> 22) | (a << (32-22));
 			sum0 = help1 ^ help2 ^ help3;
 
 			majority = (a & b) ^ (a & c) ^ (b & c);
 
 			temp2 = majority + sum0;
 
+			h = g;
+			g = f;
+			f = e;
 			e = d + temp1;
+			d = c;
+			c = b; 
+			b = a;
 			a = temp1 + temp2;
 		}
-		h0 = h0 + a; h1 = h1 + b; h2 = h2 + b; h3 = h3 + b;
-		h4 = h4 + b; h5 = h5 + b; h6 = h6 + b; h7 = h7 + b;
-		cout << endl;
-		cout << endl;
-		for (int x = 0; x < MESS_SCHEDULE_SIZE; x++) {
-        	printf("%08X ", messSchedule[x]);
-		}
+		h0 = h0 + a;
+		h1 = h1 + b;
+		h2 = h2 + c;
+		h3 = h3 + d;
+		h4 = h4 + e;
+		h5 = h5 + f;
+		h6 = h6 + g;
+		h7 = h7 + h;
 	}
+
+	cout << endl;
+	cout << endl;
+	cout << "SHA: ";
+	SHA[0] = h0;
+	SHA[1] = h1;
+	SHA[2] = h2;
+	SHA[3] = h3;
+	SHA[4] = h4;
+	SHA[5] = h5;
+	SHA[6] = h6;
+	SHA[7] = h7;
+	for (int x = 0; x < 8; x++) {
+        printf("%08X", SHA[x]);
+	}
+
 
 	free(messBlocks);
 	return 0;
