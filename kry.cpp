@@ -495,6 +495,37 @@ int countSHA(char *inputMess, uint64_t inputLen, uint32_t SHA[8]){
 	free(messBlocks);
 	return 0;
 }
+
+/**
+ * Compare MAC stored in char* and SHA stored in uint32_t
+ * 
+ * Retunr true if they are the same 
+ * 
+*/
+bool compareSHA(uint32_t SHA[8], char *SHAComp){
+
+	uint32_t SHA2[8];
+	for (int i = 0; i < 8; i++){
+		SHA2[i] = 0;
+	}
+	
+	// Copy the message into the array, byte by byte
+    for (int i = 0; i < MAC_SIZE_CHAR; i++) {
+        int index = i / sizeof(uint32_t);
+        int offset = sizeof(char)* 8 * (3 - (i % sizeof(uint32_t)));
+		
+		SHA2[index] |= (uint32_t)(static_cast<unsigned char>(SHAComp[i])) << offset;
+    }
+
+	for (uint8_t i = 0; i < 8; i++){
+		if (SHA[i] != SHA2[i]){
+			return false;
+		}
+	}
+	return true;
+
+}
+
 /******************************************************/
 
 
@@ -540,9 +571,27 @@ int main(int argc, char **argv){
 		if (countSHA(inputMessage, inputLen, SHA) == -1){
 			goto errorMalloc;
 		}
-	}
+	} 
+	// -v -k KEY -m MAC 
 	else if(prConf.program[0] == V_VALIDATE_MAC){
+		if (countSHA(inputMessage, inputLen, SHA) == -1){
+			goto errorMalloc;
+		}
 
+		if(compareSHA(SHA, prConf.mac) == true){
+			cout << "Mac are same" << endl;
+			free(inputMessage);
+			freeConfig(&prConf);
+			return 0;
+		}
+		else{
+			cout << "Mac are DIFFERENT" << endl;
+			free(inputMessage);
+			freeConfig(&prConf);
+			return 1;
+		}
+
+		
 	}
 	else if(prConf.program[0] == E_LEN_EXT_ATTACK){
 
@@ -560,7 +609,6 @@ int main(int argc, char **argv){
 	free(inputMessage);
 	freeConfig(&prConf);
 	return 0;
-
 
 
 errorMalloc:
