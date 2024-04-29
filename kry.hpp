@@ -23,12 +23,27 @@
 
 #define INIT_SIZE 1024 
 
+
 // SHA CONST 
 #define RESERVED_FOR_MESSAGE_LEN_BITS 64
 #define RESERVED_ONE_BYTE 8 
-#define MESS_BLOCK_SIZE 512
-
+#define MESS_BLOCK_SIZE_BITS 512
+#define MESS_SCHEDULE_SIZE 64 // 64 x uint_32
 #define RESERVED_BIT 0x80
+#define H0 0x6a09e667
+#define H1 0xbb67ae85
+#define H2 0x3c6ef372
+#define H3 0xa54ff53a
+#define H4 0x510e527f
+#define H5 0x9b05688c
+#define H6 0x1f83d9ab
+#define H7 0x5be0cd19
+
+#define W0 0
+#define W1 1
+#define W9 9
+#define W14 14
+#define W16 16
 
 /**
  * Structure that represents program configuration.

@@ -257,7 +257,7 @@ int readInput(char **out, uint64_t *length){
 	*length = 0;
 
 	*out = (char *)malloc(INIT_SIZE * sizeof(char));
-	if (out == NULL){
+	if (*out == NULL){
 		return -1;
 	}
 
@@ -282,74 +282,100 @@ int readInput(char **out, uint64_t *length){
 
 /**
  * Create message block from input message 
- * 
+ *
  * output block is always n*512 bits (16*uint_32) 
 */
-uint32_t *createMessageBlock(char *inputMessage, uint64_t inputLen){
+uint32_t *createMessBlock(char *inputMess, uint64_t inputLen, uint64_t *blocksCount){
 	
-	uint32_t * blocks;
-	int blocksCount = 0;
+	uint32_t *blocks;
+	uint64_t i;
+	uint64_t index; 
+	uint64_t offset;
 
 	// 512 bit 
 	// 64 bit left for message len 
 	// 512 - 64 = 448 bit 
 	// count number of blocks 
-	cout << endl << inputLen * 8 + RESERVED_ONE_BYTE + RESERVED_FOR_MESSAGE_LEN_BITS << endl;
-	blocksCount = ((inputLen * 8 + RESERVED_FOR_MESSAGE_LEN_BITS) / MESS_BLOCK_SIZE) + 1;
-	
-	blocks = (uint32_t *)malloc(blocksCount * 16 * sizeof(uint32_t));
+	*blocksCount = ((inputLen * 8 + RESERVED_FOR_MESSAGE_LEN_BITS) / MESS_BLOCK_SIZE_BITS) + 1;
+	blocks = (uint32_t *)malloc((*blocksCount) * 16 * sizeof(uint32_t));
 	if (blocks == NULL){
 		return NULL;
 	}
 
 	// initialize block with zeros 0 
-	for (int i = 0; i < blocksCount * 16; i++){
+	for (uint64_t i = 0; i < (*blocksCount) * 16; i++){
 		blocks[i] = 0;
 	}
 
 	// Copy the message into the array, byte by byte
-	uint64_t i;
-	uint64_t index; 
-	uint64_t offset;
-	cout << endl; 
     for (i = 0; i < inputLen; i++) {
         index = i / sizeof(uint32_t);
         offset = sizeof(char)* 8 * (3 - (i % sizeof(uint32_t)));
-		cout << "Index: " << index << endl; 
-		cout << "Offset: " << offset << endl; 
-		blocks[index] |= (uint32_t)(inputMessage[i]) << offset;
+		blocks[index] |= (uint32_t)(inputMess[i]) << offset;
     }
 	// append 1 
     index = i / sizeof(uint32_t);
     offset = sizeof(char)* 8 * (3 - (i % sizeof(uint32_t)));
-	cout << "Index: " << index << endl; 
-	cout << "Offset: " << offset << endl; 
 	blocks[index] |= (uint32_t)(RESERVED_BIT) << offset;
 	
 	// store message len to the message block 
 	//  in last 64 bits  
-	blocks[(blocksCount * 16)-1] = (uint32_t)(inputLen*8);
-	blocks[(blocksCount * 16)-2] = (uint32_t)((inputLen*8) >> 32);
-
-	cout << "Input Message: " << endl;
-	for (uint64_t i = 0; i < inputLen; ++i) {
-        printf("%02X ", static_cast<unsigned char>(inputMessage[i]));
-	}
-	cout << endl << "Message block: " << endl;
-	for (int i = 0; i < (16 * blocksCount); ++i) {
-        printf("%08X ", blocks[i]);
-	}
-
-
-	// store the size 
-
-	// encode the input to binary using UTF-8
-	// and append a single '1' to it. 
-	cout << endl << "kulo" << endl;
-
-
+	blocks[((*blocksCount) * 16)-1] = (uint32_t)(inputLen*8);
+	blocks[((*blocksCount) * 16)-2] = (uint32_t)((inputLen*8) >> 32);
 	
 	return blocks;
+}
+
+/**
+ * Inititalize message schedule 
+ * 
+ * block is always 2048bits = (64*uint_32)  
+*/
+int initMessSchedule(uint32_t *messSchedule, uint32_t *messBlocks){
+	
+	uint32_t sigma0;
+	uint32_t sigma1;
+
+	uint32_t temp1;
+	uint32_t temp2;
+	uint32_t temp3;
+
+	// initialize block with zeros 0 
+	for (int i = 0; i < MESS_SCHEDULE_SIZE; i++){
+		messSchedule[i] = 0;
+	}
+
+	// copy 1st chunk into 1st 166 words w[0..15] of the message schedule 
+	for (int i = 0; i < 16; i++){
+		messSchedule[i] = messBlocks[i];
+	}
+
+	// sigma 0 =     w1 right rotate 7 
+	//       	 XOR w1 right rotate 18 
+	//           XOR w1 right shift 3  
+	// sigma 1 =     w14 right rotate 17 
+	//       	 XOR w19 right rotate 19
+	//           XOR w10 right shift 10 
+	// w16     =     w0 
+	//       	  OR sigma0 
+	//       	  OR w9
+	//       	  OR sigma1 
+	for (int i = 0; i < (MESS_SCHEDULE_SIZE - W16); i++){
+		temp1 = (messSchedule[i+W1] >> 7)  | (messSchedule[i+W1] << (32-7));
+		temp2 = (messSchedule[i+W1] >> 18) | (messSchedule[i+W1] << (32-18));
+		temp3 = (messSchedule[i+W1] >> 3);
+		sigma0 = temp1 ^ temp2 ^ temp3;
+		
+		temp1 = (messSchedule[i+W14] >> 17)  | (messSchedule[i+W14] << (32-17));
+		temp2 = (messSchedule[i+W14] >> 19)  | (messSchedule[i+W14] << (32-19));
+		temp3 = (messSchedule[i+W14] >> 10);
+		sigma1 = temp1 ^ temp2 ^ temp3;
+		
+		messSchedule[i+W16] = messSchedule[i+W0] + sigma0 + messSchedule[i+W9] + sigma1;
+	}
+
+
+	return 0;
 }
 
 /**
@@ -357,17 +383,37 @@ uint32_t *createMessageBlock(char *inputMessage, uint64_t inputLen){
  * 
  * return -1 if malloc error.
 */
-int countSHA(char *inputMessage, uint64_t inputLen){
+int countSHA(char *inputMess, uint64_t inputLen){
 
-	uint32_t * messageBlock;
+	uint32_t * messBlocks;
+	uint64_t blocksCount;
+	
+	uint32_t messSchedule[MESS_SCHEDULE_SIZE];
 	
 	// split the message to the chunks 
-	messageBlock = createMessageBlock(inputMessage, inputLen);
-	if (messageBlock == NULL){
+	messBlocks = createMessBlock(inputMess, inputLen, &blocksCount);
+	if (messBlocks == NULL){
 		return -1;
 	}
+	
+	cout << "Input Message: " << endl;
+	for (uint64_t i = 0; i < inputLen; ++i) {
+        printf("%02X ", static_cast<unsigned char>(inputMess[i]));
+	}
+	cout << endl << "Message block: " << endl;
+	for (uint64_t i = 0; i < (16 * blocksCount); ++i) {
+        printf("%08X ", messBlocks[i]);
+	}
 
-	free(messageBlock);
+	// Inititialize message schedule   
+	initMessSchedule(messSchedule, messBlocks);
+	cout << endl << "Message schedule: " << endl;
+	for (int i = 0; i < MESS_SCHEDULE_SIZE; ++i) {
+        printf("%08X ", messSchedule[i]);
+	}
+
+
+	free(messBlocks);
 	return 0;
 }
 /******************************************************/
@@ -382,7 +428,7 @@ int main(int argc, char **argv){
 	// arg parsing 
 	argParse(argc, argv, &prConf);
 
-	//todo read from stdin
+	//read from stdin
 	if(readInput(&inputMessage, &inputLen) == -1){
 		goto errorMalloc;
 	}
