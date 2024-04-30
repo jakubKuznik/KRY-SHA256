@@ -14,6 +14,7 @@
 #define MAC_SIZE 256 
 #define MAC_SIZE_HEX 64 
 #define MAC_SIZE_CHAR 32 
+#define MAC_SIZE_U32 8 
 
 #define C_SHA_COUNT 0
 #define S_MAC_COUNT 1 
@@ -73,11 +74,10 @@ const uint32_t K[] = {
 typedef struct {
 	char program[1];
 	char *key;
-	uint64_t keySize;
 	char mac[MAC_SIZE_CHAR];
+	uint32_t mac_u32[MAC_SIZE_U32];
 	uint64_t num;
 	char *msgExt;
-	uint64_t msgSize;
 } programConfig;
 
 // Regex for key - validate format 
@@ -87,3 +87,12 @@ std::regex keyRegex("^[A-Za-z0-9]*$");
 // Regex for msgExt - validate format
 // ^[a-zA-Z0-9!#$%&’"()*+,\-.\/:;<>=?@[\]\\^_{}|~]*$
 std::regex msgExtRegex("^[a-zA-Z0-9!#$%&’\"()*+,\\-.\\/:;<>=?@[\\]\\\\^_{}|~]*$");
+
+
+
+// it is declared here because we are using it in argparse 
+/**
+ * copy Hash from char * into the uint32 array 
+*/
+void macToUint32(uint32_t SHA1[8], char *SHA2);
+
