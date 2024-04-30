@@ -163,16 +163,8 @@ void argParse(int argc, char **argv, programConfig *prConf){
 				goto errorMacSize;
 			}
 
-			
-			cout << "mac:" <<endl;
 			hexToChar(argv[i], prConf->mac);
-			
 			macToUint32(prConf->mac_u32, prConf->mac);
-			
-			for (int x = 0; x < 8; x++) {
-        		printf("%08x", prConf->mac_u32[x]);
-			}
-			cout << endl;
 
 		}
 		// -n NUM 
@@ -189,8 +181,6 @@ void argParse(int argc, char **argv, programConfig *prConf){
 			} catch (const std::out_of_range& e) {
 				goto errorNum;
             }
-			cout << "n: "<< prConf->num << endl;
-			cout << endl;
 		}
 		// -a MSG
 		else if (strcmp(argv[i],"-a") == 0){
@@ -208,12 +198,8 @@ void argParse(int argc, char **argv, programConfig *prConf){
 			strcpy(prConf->msgExt, argv[i]);
 			// ^[a-zA-Z0-9!#$%&’"()*+,\-.\/:;<>=?@[\]\\^_{}|~]*$
 			if (!regex_match(prConf->msgExt, msgExtRegex)){
-				cout << "regex" << endl;
 				goto errorFormat;
 			}
-			cout << "msgExt: "<< prConf->msgExt << endl;
-			cout << endl;
-		
 		}
 		else{
 			goto errorArgs;
@@ -412,161 +398,72 @@ void initMessSchedule(uint32_t *messSchedule, uint32_t *messBlocks, uint64_t blo
 }
 
 /**
- * Count SHA 
+ * Count SHA or count sha for Lenght extension attack 
+ * 
+ * if attack = true execute lenght extension attack  
  * 
  * return -1 if malloc error.
 */
-int countSHA(char *inputMess, uint64_t inputLen, uint32_t SHA[8]){
+int countSHA(char *inputMess, uint64_t inputLen, uint32_t SHA[8],
+			programConfig *programConf, bool attack){
 
-	uint32_t * messBlocks;
+	uint32_t *messBlocks;
 	uint64_t blocksCount;
 	uint32_t messSchedule[MESS_SCHEDULE_SIZE];
-	
-	// split the message to the chunks 
-	messBlocks = createMessBlock(inputMess, inputLen, &blocksCount);
-	if (messBlocks == NULL){
-		return -1;
-	}
 
-	uint32_t h0 = H0;
-	uint32_t h1 = H1;
-	uint32_t h2 = H2;
-	uint32_t h3 = H3;
-	uint32_t h4 = H4;
-	uint32_t h5 = H5;
-	uint32_t h6 = H6;
-	uint32_t h7 = H7;
+	uint32_t h0, h1, h2, h3, h4, h5, h6, h7;
 
-	uint32_t a,b,c,d,e,f,g,h;
-
-	uint32_t temp1, temp2;
-	
-	uint32_t sum0, sum1;
-	uint32_t choice;
-	uint32_t majority;
-	
-	uint32_t help1, help2, help3;
-
-	// for each chunk do the callculation 
-	for (uint64_t i = 0; i < blocksCount; i++){
-
-		// Inititialize message schedule   
-		initMessSchedule(messSchedule, messBlocks, i);
-	
-		a = h0; b = h1; c = h2; d = h3;
-		e = h4; f = h5; g = h6; h = h7;
-		
-		// work with message schedule 
-		for (int j = 0; j < MESS_SCHEDULE_SIZE; j++){
-
-			help1 = (e >> 6) | (e << (32-6));
-			help2 = (e >> 11) | (e << (32-11));
-			help3 = (e >> 25) | (e << (32-25));
-			sum1  = help1 ^ help2 ^ help3;
-
-			choice = (e & f) ^ (~e & g);
-
-			temp1 = h + sum1 + choice + K[j] + messSchedule[j];
-
-			help1 = (a >> 2) | (a << (32-2));
-			help2 = (a >> 13) | (a << (32-13));
-			help3 = (a >> 22) | (a << (32-22));
-			sum0 = help1 ^ help2 ^ help3;
-
-			majority = (a & b) ^ (a & c) ^ (b & c);
-
-			temp2 = majority + sum0;
-
-			h = g;
-			g = f;
-			f = e;
-			e = d + temp1;
-			d = c;
-			c = b; 
-			b = a;
-			a = temp1 + temp2;
+	// normal SHA computation 
+	if (attack == false){
+		// split the message to the chunks 
+		messBlocks = createMessBlock(inputMess, inputLen, &blocksCount);
+		if (messBlocks == NULL){
+			return -1;
 		}
-		h0 = h0 + a;
-		h1 = h1 + b;
-		h2 = h2 + c;
-		h3 = h3 + d;
-		h4 = h4 + e;
-		h5 = h5 + f;
-		h6 = h6 + g;
-		h7 = h7 + h;
+		h0 = H0;
+		h1 = H1;
+		h2 = H2;
+		h3 = H3;
+		h4 = H4;
+		h5 = H5;
+		h6 = H6;
+		h7 = H7;
 	}
+	// If the Lenght extension attack is happening 
+	else {
+		// how many blocks were in original messgae 	
+		uint64_t origMessBlocks;
+
+		// extend input message by key-len
+		uint64_t origMessSize = inputLen + programConf->num;
 	
-	SHA[0] = h0;
-	SHA[1] = h1;
-	SHA[2] = h2;
-	SHA[3] = h3;
-	SHA[4] = h4;
-	SHA[5] = h5;
-	SHA[6] = h6;
-	SHA[7] = h7;
+		uint64_t maliciousLen;
 
-	free(messBlocks);
-	return 0;
-}
-
-/**
- * Execute length extension attack  
- * 
- * return -1 if malloc error.
-*/
-int countSHA_LEA(char *inputMess, uint64_t inputLen, uint32_t SHA[8], 
-					programConfig *programConf){
-
-	uint32_t * messBlocks;
-	uint64_t blocksCount;
-	uint32_t messSchedule[MESS_SCHEDULE_SIZE];
-
-	// how many blocks were in original messgae 	
-	uint64_t origMessBlocks;
-
-	// extend input message by key-len
-	uint64_t origMessSize = inputLen + programConf->num;
-	
-	uint64_t maliciousLen;
-
-	// count how many message blocks were in the original message 
-	origMessBlocks = ((origMessSize * 8 + RESERVED_FOR_MESSAGE_LEN_BITS) / MESS_BLOCK_SIZE_BITS) + 1;
+		// count how many message blocks were in the original message 
+		origMessBlocks = ((origMessSize * 8 + RESERVED_FOR_MESSAGE_LEN_BITS) / MESS_BLOCK_SIZE_BITS) + 1;
 		
-	cout << "orig mess size: " <<  origMessSize << endl;
-	cout << "orig mess blocks : " <<  origMessBlocks << endl;
-	cout << "message : " <<  programConf->msgExt << endl;
-	cout << "message len : " <<  strlen(programConf->msgExt) << endl;
-	cout << "sha[0]: " ;
-    printf("%08x", programConf->mac_u32[0]);
-	cout <<  endl;
-
-	// create blocks, but then put the malicious len there 		
-	// split the message to the chunks 
-	messBlocks = createMessBlock(programConf->msgExt, strlen(programConf->msgExt), &blocksCount);
-	if (messBlocks == NULL){
-		return -1;
-	}	
+		// create blocks, but then put the malicious len there 		
+		messBlocks = createMessBlock(programConf->msgExt, strlen(programConf->msgExt), &blocksCount);
+		if (messBlocks == NULL){
+			return -1;
+		}	
 	
-	maliciousLen = (64 * origMessBlocks) + strlen(programConf->msgExt);
-	cout << "mal len: " << maliciousLen << endl;
+		maliciousLen = (64 * origMessBlocks) + strlen(programConf->msgExt);
 
-	// count how many blocks are there 
-	// delka = pocet predchozich bloku, ktere byly pouzity v bytech (n*64) + 
-	// 		delka_nove_zpravy + 
-	// store message len to the message block 
-	//  in last 64 bits  
-	messBlocks[(blocksCount * 16)-1] = (uint32_t)(maliciousLen*8);
-	messBlocks[(blocksCount * 16)-2] = (uint32_t)((maliciousLen*8) >> 32);
+		// store malicious message len to the message block 
+		//  in last 64 bits  
+		messBlocks[(blocksCount * 16)-1] = (uint32_t)(maliciousLen*8);
+		messBlocks[(blocksCount * 16)-2] = (uint32_t)((maliciousLen*8) >> 32);
 
-
-	uint32_t h0 = programConf->mac_u32[0];
-	uint32_t h1 = programConf->mac_u32[1];
-	uint32_t h2 = programConf->mac_u32[2];
-	uint32_t h3 = programConf->mac_u32[3];
-	uint32_t h4 = programConf->mac_u32[4];
-	uint32_t h5 = programConf->mac_u32[5];
-	uint32_t h6 = programConf->mac_u32[6];
-	uint32_t h7 = programConf->mac_u32[7];
+		h0 = programConf->mac_u32[0];
+		h1 = programConf->mac_u32[1];
+		h2 = programConf->mac_u32[2];
+		h3 = programConf->mac_u32[3];
+		h4 = programConf->mac_u32[4];
+		h5 = programConf->mac_u32[5];
+		h6 = programConf->mac_u32[6];
+		h7 = programConf->mac_u32[7];
+	}
 
 	uint32_t a,b,c,d,e,f,g,h;
 
@@ -660,14 +557,15 @@ void macToUint32(uint32_t SHA1[8], char *SHA2){
  * Retunr true if they are the same 
 */
 bool compareSHA(uint32_t SHA1[8], uint32_t SHA2[8]){
+	
 	for (uint8_t i = 0; i < 8; i++){
 		if (SHA1[i] != SHA2[i]){
 			return false;
 		}
 	}
+
 	return true;
 }
-
 /******************************************************/
 
 
@@ -681,8 +579,6 @@ int main(int argc, char **argv){
 	// arg parsing 
 	argParse(argc, argv, &prConf);
 
-	
-
 	//read from stdin
 	if(readInput(&inputMessage, &inputLen, prConf.key) == -1){
 		goto errorMalloc;
@@ -690,13 +586,18 @@ int main(int argc, char **argv){
 
 	// -c || -s -k KEY 
 	if(prConf.program[0] == C_SHA_COUNT || prConf.program[0] == S_MAC_COUNT){
-		if (countSHA(inputMessage, inputLen, SHA) == -1){
+		if (countSHA(inputMessage, inputLen, SHA, &prConf, false) == -1){
 			goto errorMalloc;
 		}
+		// print SHA256 to STDOUT 
+		for (int x = 0; x < 8; x++) {
+        	printf("%08x", SHA[x]);
+		}
+		cout << endl;
 	} 
 	// -v -k KEY -m MAC 
 	else if(prConf.program[0] == V_VALIDATE_MAC){
-		if (countSHA(inputMessage, inputLen, SHA) == -1){
+		if (countSHA(inputMessage, inputLen, SHA, &prConf, false) == -1){
 			goto errorMalloc;
 		}
 
@@ -712,38 +613,42 @@ int main(int argc, char **argv){
 		}
 	}
 	else if(prConf.program[0] == E_LEN_EXT_ATTACK){
-
-		/**
-		a3b205a7ebb070c26910e1028322e99b35e846d5db399aae295082ddecf3edd3
-		zprava\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x
-		00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x
-		00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x
-		00\x00\x00\x00\x00\x00\x58==message
-		*/
-		
-		//
-		if (countSHA_LEA(inputMessage, inputLen, SHA, &prConf) == -1){
+	 	
+		if (countSHA(inputMessage, inputLen, SHA, &prConf, true) == -1){
 			goto errorMalloc;
 		}
 
+		// how many blocks were in original message
+		uint64_t origMessSize = inputLen + prConf.num;
+		// count how many message blocks were in the original message 
+		uint64_t origMessBlocks = ((origMessSize * 8 + RESERVED_FOR_MESSAGE_LEN_BITS) 
+					 	/ MESS_BLOCK_SIZE_BITS) + 1;
+		uint64_t nullBytes = origMessBlocks*64 - origMessSize - strlen(prConf.msgExt); 
 
+		cout << "null byte: " << nullBytes << endl;
 
+		// print SHA256 to STDOUT 
+		for (int x = 0; x < 8; x++) {
+        	printf("%08x", SHA[x]);
+		}
+		cout << endl;
+		for (uint64_t i = 0; i < inputLen; i++){
+			printf("%c",inputMessage[i]);
+		}
+		printf("\\x80");
+		for (uint64_t i = 0; i < nullBytes; i++){
+			printf("\\x00");
+		}
+		cout << prConf.msgExt << endl;
 	}
-
-	// print SHA256 to STDOUT 
-	for (int x = 0; x < 8; x++) {
-        printf("%08x", SHA[x]);
-	}
-	cout << endl;
-
 
 	free(inputMessage);
 	freeConfig(&prConf);
 	return 0;
-
 
 errorMalloc:
 	cerr << "Error: Memory allocation error"<< endl;
 	freeConfig(&prConf);
 	exit(3);
 }
+
