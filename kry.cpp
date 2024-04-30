@@ -30,7 +30,7 @@ void printHelp(){
 	cout << endl;
 	cout << "    -k KEY" << endl;
 	cout << "           Specify secret key for MAC calculation. " << endl;
-	cout << "           KEY format: ^[A-Fa-f0-9]*$" << endl;
+	cout << "           KEY format: ^[A-Za-Z0-9]*$" << endl;
 	cout << "    -m CHS" << endl;
 	cout << "           Specify MAC of the input message for its verification or " << endl;
 	cout << "           attack execution." << endl;
@@ -276,7 +276,6 @@ int readInput(char **out, uint64_t *length, char *key){
 	// if there is a key append it before message 
 	if (key != nullptr){
 		while ((*length) < strlen(key)){
-			cout << " h " ;
 			if ((*length) + 1 > allocatedSize){
 				allocatedSize += INIT_SIZE;
 				char *temp = (char *)realloc(out, allocatedSize * sizeof(char));
@@ -547,24 +546,24 @@ int main(int argc, char **argv){
 	// TODO remove debug  
 	// -s -k KEY 
 	// KEYmessage 
-	cout << "Key: " << endl;
-	if (prConf.key != nullptr)
-		cout << prConf.key << endl;
-	cout << "MSG ext: " << endl;
-	if (prConf.msgExt != nullptr)
-		cout << prConf.msgExt << endl;
-	cout << "program config: " << endl;
-	cout << prConf.program[0] << endl;
-	cout << "MAC: " << endl;
-	for (int i = 0; i < MAC_SIZE_CHAR; ++i) {
-        printf("%02X ", static_cast<unsigned char>(prConf.mac[i]));
-    }
-	cout << endl << "Input Length: " << endl;
-	cout << inputLen << endl;
-	cout << "Input Message: " << endl;
-	for (uint64_t i = 0; i < inputLen; ++i) {
-        printf("%02X ", static_cast<unsigned char>(inputMessage[i]));
-	}
+// 	cout << "Key: " << endl;
+// 	if (prConf.key != nullptr)
+// 		cout << prConf.key << endl;
+// 	cout << "MSG ext: " << endl;
+// 	if (prConf.msgExt != nullptr)
+// 		cout << prConf.msgExt << endl;
+// 	cout << "program config: " << endl;
+// 	cout << prConf.program[0] << endl;
+// 	cout << "MAC: " << endl;
+// 	for (int i = 0; i < MAC_SIZE_CHAR; ++i) {
+//         printf("%02X ", static_cast<unsigned char>(prConf.mac[i]));
+//     }
+// 	cout << endl << "Input Length: " << endl;
+// 	cout << inputLen << endl;
+// 	cout << "Input Message: " << endl;
+// 	for (uint64_t i = 0; i < inputLen; ++i) {
+//         printf("%02X ", static_cast<unsigned char>(inputMessage[i]));
+// 	}
 
 	// -c || -s -k KEY 
 	if(prConf.program[0] == C_SHA_COUNT || prConf.program[0] == S_MAC_COUNT){
@@ -579,13 +578,13 @@ int main(int argc, char **argv){
 		}
 
 		if(compareSHA(SHA, prConf.mac) == true){
-			cout << "Mac are same" << endl;
+			// cout << "Mac are same" << endl;
 			free(inputMessage);
 			freeConfig(&prConf);
 			return 0;
 		}
 		else{
-			cout << "Mac are DIFFERENT" << endl;
+			// cout << "Mac are DIFFERENT" << endl;
 			free(inputMessage);
 			freeConfig(&prConf);
 			return 1;
@@ -597,8 +596,6 @@ int main(int argc, char **argv){
 
 	}
 
-
-	cout << endl;
 	// print SHA256 to STDOUT 
 	for (int x = 0; x < 8; x++) {
         printf("%08x", SHA[x]);
