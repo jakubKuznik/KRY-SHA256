@@ -73,6 +73,14 @@ Do the Lengh extension attack and append `==mesage` to original message.
 ```
 echo -ne "zprava" | ./kry -e -n 5 -a ==message -m 23158796a45a9392951d9a72dffd6a539b14a07832390b937b94a80ddb6dc18e
 ```
+Desired Output:
+```
+a3b205a7ebb070c26910e1028322e99b35e846d5db399aae295082ddecf3edd3
+zprava\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x
+00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x
+00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x
+00\x00\x00\x00\x00\x00\x58==message
+```
 
 ## Sources 
 https://sha256algorithm.com/  

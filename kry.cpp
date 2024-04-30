@@ -9,7 +9,6 @@
 
 using namespace std;
 
-
 /**
  * Prints help and exit program with return code 1
 */
@@ -194,6 +193,7 @@ void argParse(int argc, char **argv, programConfig *prConf){
 			catch (const bad_alloc& e){
 				goto errorAllocation;
 			}
+			strcpy(prConf->msgExt, argv[i]);
 			// ^[a-zA-Z0-9!#$%&’"()*+,\-.\/:;<>=?@[\]\\^_{}|~]*$
 			if (!regex_match(prConf->msgExt, msgExtRegex)){
 				goto errorFormat;
@@ -543,28 +543,6 @@ int main(int argc, char **argv){
 		goto errorMalloc;
 	}
 
-	// TODO remove debug  
-	// -s -k KEY 
-	// KEYmessage 
-// 	cout << "Key: " << endl;
-// 	if (prConf.key != nullptr)
-// 		cout << prConf.key << endl;
-// 	cout << "MSG ext: " << endl;
-// 	if (prConf.msgExt != nullptr)
-// 		cout << prConf.msgExt << endl;
-// 	cout << "program config: " << endl;
-// 	cout << prConf.program[0] << endl;
-// 	cout << "MAC: " << endl;
-// 	for (int i = 0; i < MAC_SIZE_CHAR; ++i) {
-//         printf("%02X ", static_cast<unsigned char>(prConf.mac[i]));
-//     }
-// 	cout << endl << "Input Length: " << endl;
-// 	cout << inputLen << endl;
-// 	cout << "Input Message: " << endl;
-// 	for (uint64_t i = 0; i < inputLen; ++i) {
-//         printf("%02X ", static_cast<unsigned char>(inputMessage[i]));
-// 	}
-
 	// -c || -s -k KEY 
 	if(prConf.program[0] == C_SHA_COUNT || prConf.program[0] == S_MAC_COUNT){
 		if (countSHA(inputMessage, inputLen, SHA) == -1){
@@ -578,22 +556,18 @@ int main(int argc, char **argv){
 		}
 
 		if(compareSHA(SHA, prConf.mac) == true){
-			// cout << "Mac are same" << endl;
 			free(inputMessage);
 			freeConfig(&prConf);
 			return 0;
 		}
 		else{
-			// cout << "Mac are DIFFERENT" << endl;
 			free(inputMessage);
 			freeConfig(&prConf);
 			return 1;
 		}
-
-		
 	}
 	else if(prConf.program[0] == E_LEN_EXT_ATTACK){
-
+		// count how many blocks are there 
 	}
 
 	// print SHA256 to STDOUT 

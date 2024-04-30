@@ -7,7 +7,9 @@
 
 CC = g++
 
-CFLAGS = -g -Wpedantic -Wall -Wextra 
+SANITIZE_FLAGS = -fsanitize=address,leak 
+CFLAGS = -g -Wpedantic -Wall -Wextra $(SANITIZE_FLAGS) 
+
 all: kry
 
 kry: kry.cpp 
