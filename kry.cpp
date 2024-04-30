@@ -649,8 +649,8 @@ int main(int argc, char **argv){
 						<< ((messBlocks[i] >> offset) & 0xFF);
 			}
 		}
-		free(messBlocks);
 		cout << prConf.msgExt << endl;
+		free(messBlocks);
 	}
 
 	free(inputMessage);
