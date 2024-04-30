@@ -169,7 +169,6 @@ void argParse(int argc, char **argv, programConfig *prConf){
     		for (int i = 0; i < MAC_SIZE_CHAR; i++) {
         		int index = i / sizeof(uint32_t);
         		int offset = sizeof(char)* 8 * (3 - (i % sizeof(uint32_t)));
-				// SHA1[index] |= (uint32_t)(static_cast<unsigned char>(SHA2[i])) << offset;
         		prConf->mac_u32[index] |= static_cast<uint32_t>(static_cast<unsigned char>(prConf->mac[i])) << offset;
     		}
 		}
