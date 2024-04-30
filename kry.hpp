@@ -89,11 +89,3 @@ std::regex keyRegex("^[A-Za-z0-9]*$");
 // ^[a-zA-Z0-9!#$%&’"()*+,\-.\/:;<>=?@[\]\\^_{}|~]*$
 std::regex msgExtRegex("^[a-zA-Z0-9!#$%&’\"()*+,\\-.\\/:;<>=?@[\\]\\\\^_{}|~]*$");
 
-
-
-// it is declared here because we are using it in argparse 
-/**
- * copy Hash from char * into the uint32 array 
-*/
-void macToUint32(uint32_t SHA1[8], char *SHA2);
-

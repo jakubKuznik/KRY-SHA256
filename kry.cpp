@@ -69,7 +69,7 @@ void freeConfig(programConfig *prConf){
  */
 void hexToChar(char *hex, char *out){
 
-	char hexDigits[3];
+	char hexDigits[3] = {0,0,0};
 	int j = 0;
 	for (size_t i = 0; i < strlen(hex); i+=2){
 		
@@ -79,7 +79,6 @@ void hexToChar(char *hex, char *out){
 
         out[j++] = static_cast<uint8_t>(std::stoi(hexDigits, nullptr, 16));
 	}
-
 	return;
 }
 
@@ -164,8 +163,15 @@ void argParse(int argc, char **argv, programConfig *prConf){
 			}
 
 			hexToChar(argv[i], prConf->mac);
-			macToUint32(prConf->mac_u32, prConf->mac);
-
+			for (int i = 0; i < MAC_SIZE_U32; i++){
+				prConf->mac_u32[i] = 0;
+			}
+    		for (int i = 0; i < MAC_SIZE_CHAR; i++) {
+        		int index = i / sizeof(uint32_t);
+        		int offset = sizeof(char)* 8 * (3 - (i % sizeof(uint32_t)));
+				// SHA1[index] |= (uint32_t)(static_cast<unsigned char>(SHA2[i])) << offset;
+        		prConf->mac_u32[index] |= static_cast<uint32_t>(static_cast<unsigned char>(prConf->mac[i])) << offset;
+    		}
 		}
 		// -n NUM 
 		else if (strcmp(argv[i],"-n") == 0){
@@ -407,11 +413,12 @@ void initMessSchedule(uint32_t *messSchedule, uint32_t *messBlocks, uint64_t blo
 int countSHA(char *inputMess, uint64_t inputLen, uint32_t SHA[8],
 			programConfig *programConf, bool attack){
 
-	uint32_t *messBlocks;
+	uint32_t *messBlocks = NULL;
 	uint64_t blocksCount;
 	uint32_t messSchedule[MESS_SCHEDULE_SIZE];
 
 	uint32_t h0, h1, h2, h3, h4, h5, h6, h7;
+
 
 	// normal SHA computation 
 	if (attack == false){
@@ -430,7 +437,7 @@ int countSHA(char *inputMess, uint64_t inputLen, uint32_t SHA[8],
 		h7 = H7;
 	}
 	// If the Lenght extension attack is happening 
-	else {
+	else if (attack == true) {
 		// how many blocks were in original messgae 	
 		uint64_t origMessBlocks;
 
@@ -537,19 +544,6 @@ int countSHA(char *inputMess, uint64_t inputLen, uint32_t SHA[8],
 	return 0;
 }
 
-/**
- * copy Hash from char * into the uint32 array 
-*/
-void macToUint32(uint32_t SHA1[8], char *SHA2){
-	
-	// Copy the message into the array, byte by byte
-    for (int i = 0; i < MAC_SIZE_CHAR; i++) {
-        int index = i / sizeof(uint32_t);
-        int offset = sizeof(char)* 8 * (3 - (i % sizeof(uint32_t)));
-		
-		SHA1[index] |= (uint32_t)(static_cast<unsigned char>(SHA2[i])) << offset;
-    }
-}
 
 /**
  * Compare MAC stored in char* and SHA stored in uint32_t
@@ -557,13 +551,13 @@ void macToUint32(uint32_t SHA1[8], char *SHA2){
  * Retunr true if they are the same 
 */
 bool compareSHA(uint32_t SHA1[8], uint32_t SHA2[8]){
-	
+
 	for (uint8_t i = 0; i < 8; i++){
 		if (SHA1[i] != SHA2[i]){
 			return false;
 		}
 	}
-
+	
 	return true;
 }
 /******************************************************/
@@ -613,7 +607,6 @@ int main(int argc, char **argv){
 		}
 	}
 	else if(prConf.program[0] == E_LEN_EXT_ATTACK){
-	 	
 		if (countSHA(inputMessage, inputLen, SHA, &prConf, true) == -1){
 			goto errorMalloc;
 		}
