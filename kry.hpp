@@ -10,6 +10,7 @@
 #include <string.h>
 #include <algorithm>
 #include <regex>
+#include <iomanip> 
 
 #define MAC_SIZE 256 
 #define MAC_SIZE_HEX 64 
@@ -22,7 +23,7 @@
 #define E_LEN_EXT_ATTACK 3 
 #define NOTHING 4 
 
-#define INIT_SIZE 1024 
+#define INIT_SIZE 1024
 
 // SHA CONST 
 #define RESERVED_FOR_MESSAGE_LEN_BITS 64

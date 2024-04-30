@@ -617,28 +617,39 @@ int main(int argc, char **argv){
 		if (countSHA(inputMessage, inputLen, SHA, &prConf, true) == -1){
 			goto errorMalloc;
 		}
+		
+		uint32_t *messBlocks;
+		uint64_t blocksCount;
 
-		// how many blocks were in original message
-		uint64_t origMessSize = inputLen + prConf.num;
-		// count how many message blocks were in the original message 
-		uint64_t origMessBlocks = ((origMessSize * 8 + RESERVED_FOR_MESSAGE_LEN_BITS) 
-					 	/ MESS_BLOCK_SIZE_BITS) + 1;
-		uint64_t nullBytes = origMessBlocks*64 - origMessSize - strlen(prConf.msgExt); 
-
-		cout << "null byte: " << nullBytes << endl;
+		// split the message to the chunks 
+		messBlocks = createMessBlock(inputMessage, (inputLen+prConf.num), &blocksCount);
+		if (messBlocks == NULL){
+			return -1;
+		}
 
 		// print SHA256 to STDOUT 
 		for (int x = 0; x < 8; x++) {
         	printf("%08x", SHA[x]);
 		}
 		cout << endl;
-		for (uint64_t i = 0; i < inputLen; i++){
-			printf("%c",inputMessage[i]);
+		for (uint64_t x = 0; x < inputLen; x++) {
+        	printf("%c", inputMessage[x]);
 		}
-		printf("\\x80");
-		for (uint64_t i = 0; i < nullBytes; i++){
-			printf("\\x00");
+		for (uint64_t i = 0; i < (blocksCount)*16; i++){
+			for (int p = 0; p < 4; p++){
+				if ((i * 4) + p < (inputLen + prConf.num)){
+					continue;
+				}
+				if ((i * 4) + p == (inputLen + prConf.num)){
+					cout << "\\x80";	
+					continue;
+				}
+				int offset = 24 - ((p % 4) * 8);
+				cout << "\\x" << hex << setw(2) << setfill('0') 
+						<< ((messBlocks[i] >> offset) & 0xFF);
+			}
 		}
+		free(messBlocks);
 		cout << prConf.msgExt << endl;
 	}
 
