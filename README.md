@@ -1,11 +1,11 @@
 # SHA256 
-## Faculty: BUT FIT, Course: PDS
+## Faculty: BUT FIT, Course: KRY
 
 Name: Jakub Kuznik  
 Login: xkuzni04  
 
 # Points 
-*/10
+9.62/10
 
 # About 
 
